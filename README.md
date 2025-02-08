@@ -10,13 +10,13 @@ A Django-based backend service for the FastPool application.
 
 ## Setup
 
-**Note: Please follow the instructions carefully.**
+<span style="color: red; font-weight: bold;">Note:</span> <span style="font-weight: bold;">Please follow the instructions carefully.</span>
 
-1. Clone the repository into a directory named `follo-be`
+1. Clone the repository into a directory named <u style="color: yellow;">fastpool-be</u>
 
 ```bash
-git clone <repository-url> follo-be
-cd follo-be
+git clone <repository-url> fastpool-be
+cd fastpool-be
 ```
 
 2. Install dependencies
@@ -34,6 +34,8 @@ USER=your_db_user
 PASSWORD=your_db_password
 HOST=your_db_host
 PORT=your_db_port
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_key
 ```
 
 4. Run migrations
