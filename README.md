@@ -12,7 +12,7 @@ A Django-based backend service for the FastPool application.
 
 <span style="color: red; font-weight: bold;">Note:</span> <span style="font-weight: bold;">Please follow the instructions carefully.</span>
 
-1. Clone the repository into a directory named <u style="color: yellow;">fastpool-be</u>
+1. Clone the repository
 
 ```bash
 git clone <repository-url> fastpool-be
