@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.decorators import action
 from rest_framework.exceptions import AuthenticationFailed
+from utils.helper import*
 # Create your views here.
 
 class UserViewSet(viewsets.ModelViewSet):
@@ -21,10 +22,11 @@ class UserViewSet(viewsets.ModelViewSet):
   def signup(self, request):
     serializer = self.get_serializer(data=request.data)
     if serializer.is_valid():
-      user = serializer.save()  # Calls `create()` in `UserSerializer`
-      user.send_welcome_email()  # Call the email function
-      return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+      send_verification_email(request.data.get('username'), request.data.get('email'))
+      return Response(status=status.HTTP_200_OK)
+    return Response(status=status.HTTP_400_BAD_REQUEST)
+  
+    
 
   @action(detail=False, methods=['post'], url_path='login')
   def login(self, request):
@@ -52,5 +54,21 @@ class UserViewSet(viewsets.ModelViewSet):
     
     except Exception as e:
       return Response({'error': str(e)}, status=status.HTTP_401_UNAUTHORIZED)
+    
+  @action(detail=False, methods=['post'], url_path='verify')
+  def verify(self, request):
+    data = request.data
+    otp = data.pop('otp', None)
+    if otp:
+      cache_key = f'otp_{data.get("email")}'
+      if cache.get(cache_key) == otp:
+        serializer = self.get_serializer(data=data)
+        if serializer.is_valid():
+          user = serializer.save()  # Calls `create()` in `UserSerializer`
+          return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+      return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'error': 'OTP is required'}, status=status.HTTP_400_BAD_REQUEST)
+  
 
 

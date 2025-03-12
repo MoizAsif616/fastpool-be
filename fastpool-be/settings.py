@@ -60,8 +60,10 @@ ROOT_URLCONF = 'fastpool-be.urls'
 TEMPLATES = [
 	{
 		'BACKEND': 'django.template.backends.django.DjangoTemplates',
-		'DIRS': [],
-		'APP_DIRS': True,
+		'DIRS': [
+            BASE_DIR / 'utils/templates',  # Add the path to your templates directory
+        ],
+  'APP_DIRS': True,
 		'OPTIONS': {
 			'context_processors': [
 					'django.template.context_processors.debug',
@@ -152,4 +154,10 @@ REST_FRAMEWORK = {
 	# 'DEFAULT_RENDERER_CLASSES': [
 	# 	'rest_framework.renderers.JSONRenderer',
 	# ]
+}
+
+CACHE={
+	'default': {
+		'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+ 	}
 }
