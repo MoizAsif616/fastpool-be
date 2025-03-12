@@ -10,8 +10,7 @@ class User(models.Model):
   username = models.CharField(max_length=100, blank=False, null=False)
   email = models.EmailField(max_length=100, blank=False, null=False, unique=True) 
   gender = models.CharField(max_length=6, choices=[('Male', 'Male'), ('Female', 'Female'), ('Other', 'Other')], default='Male')
-  phone = models.CharField(max_length=13)
-  is_verified = models.BooleanField(default=True)
+  phone = models.CharField(max_length=11, blank=False, null=False)
 
   class Meta:
     db_table = 'user'
@@ -46,11 +45,4 @@ class User(models.Model):
       return True
     return False
 
-  def send_welcome_email(self):
-    subject = 'Welcome to Fastpool'
-    html_message = render_to_string('welcome_email.html', {'user': self})
-    plain_message = strip_tags(html_message)
-    from_email = settings.EMAIL_HOST_USER
-    to = self.email
-
-    send_mail(subject, plain_message, from_email, [to], html_message=html_message)
+  

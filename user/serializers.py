@@ -17,7 +17,6 @@ class UserSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
       print("UserSerializer: create called")
       password = validated_data.pop('password', None)
-      
       try:
         # Store the password in Supabase Auth
         supabase.auth.sign_up({'email':validated_data['email'], 'password':password})
