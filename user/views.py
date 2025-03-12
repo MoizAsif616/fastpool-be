@@ -40,9 +40,6 @@ class UserViewSet(viewsets.ModelViewSet):
       # Authenticate user with Supabase Auth
       response = supabase.auth.sign_in_with_password({'email': email, 'password': password})
       user = User.objects.get(email=email)
-      if user.is_verified:
-        return Response({'error': 'User is not verified.'}, status=status.HTTP_403_FORBIDDEN)
-        
       access_token = response.session.access_token
       refresh_token = response.session.refresh_token
 
