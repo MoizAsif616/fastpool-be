@@ -18,14 +18,6 @@ class User(models.Model):
   def __str__(self):
     return self.username
   
-  def get_auth_id(self):
-    # Fetch Supabase Auth ID by comparing emails
-    auth_users = supabase.auth.admin.list_users()
-    for auth_user in auth_users:
-      if auth_user.email == self.email:
-        return auth_user.id
-    return None
-  
   def update_password(self, new_password):
     # Update password in Supabase Auth
     auth_id = self.get_auth_id()

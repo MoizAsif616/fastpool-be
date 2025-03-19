@@ -2,11 +2,14 @@ from rest_framework import serializers
 from .models import *
 from utils.supabase_client import supabase
 from rest_framework.exceptions import ValidationError
+from driver.serializers import *
+from rider.serializers import *
 
 class UserSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
       write_only=True,  # ensures passwrd is not included in responses
       min_length=6,  
+      required=False
     ) 
 
     class Meta:
@@ -24,8 +27,26 @@ class UserSerializer(serializers.ModelSerializer):
         raise ValidationError(f"Supabase Auth sign-up failed: {str(e)}")
       
       user = super().create(validated_data) 
+      # Create the Driver instance using the DriverSerializer
+      entity = {
+        'id': user.id,  
+      }
+
+      driver_serializer = DriverSerializer(data=entity)
+      if driver_serializer.is_valid():
+        driver_serializer.save()
+      else:
+        raise serializers.ValidationError(driver_serializer.errors)
+      
+      rider_serializer = RiderSerializer(data=entity)
+      if rider_serializer.is_valid():
+        rider_serializer.save()
+      else:
+        raise serializers.ValidationError(rider_serializer.errors)
+
       return user
 
     def update(self, instance, validated_data):
-        print("UserSerializer: update called")
-        return super().update(instance, validated_data)
+      print("UserSerializer: update called")
+      validated_data.pop('email', None)
+      return super().update(instance, validated_data)
