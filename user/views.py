@@ -84,13 +84,52 @@ class UserViewSet(viewsets.ModelViewSet):
   @action(detail=False, methods=['post'], url_path='request-link')
   def send_password_reset_link(self, request):
     email = request.data.get('email')
+    url = request.data.get('url')
     if not email:
       return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
     try:
-      response = supabase.auth.reset_password_for_email(email)
-      return Response({'message': 'Password reset link sent successfully'}, status=status.HTTP_200_OK)
+      user = User.objects.get(email=email)
+      if user:
+        token = uuid.uuid4().hex
+        cache.set(token, user.email, timeout=5*3600)
+        print("making url")
+        URL = url + '?token=' + token
+        send_password_reset_email(email, URL)
+        return Response(status=status.HTTP_200_OK)
+      else:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
     except Exception as e:
-      return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+      return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+  @action(detail=False, methods=['post'], url_path='reset')
+  def reset_password(self, request):
+    token = request.data.get('token')
+    password = request.data.get('password')
+    if not token:
+      return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+    if not password:
+      return Response({'error': 'Password is required'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+      email = cache.get(token)
+      if email:
+        sid = get_auth_id(email)
+        print("sid is",sid)
+        print("email is",email)
+        if sid:
+          try:
+            supabase.auth.admin.delete_user(sid)
+          except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+          
+          supabase.auth.sign_up({'email': email, 'password':password})
+        else:
+          return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+      else:
+        return Response({'error': 'Invalid email'}, status=status.HTTP_400_BAD_REQUEST)
+      
+      return Response(status=status.HTTP_200_OK)
+    except Exception as e:
+      return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
   
   def destroy(self, request, *args, **kwargs):
     user = self.get_object()  # Get the User instance being deleted
