@@ -1,4 +1,5 @@
 import random
+import os
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.conf import settings
@@ -8,6 +9,7 @@ from .templates import *
 from rest_framework.response import Response
 from rest_framework import status
 from .supabase_client import supabase
+import filetype
 # Create your models here.
 def generate_Otp():
   return str(random.randint(100000, 999999))
@@ -64,3 +66,33 @@ def get_auth_id(email):
 		if auth_user.email == email:
 			return auth_user.id
 	return None
+
+def upload_picture(user_id, in_memory_file):
+    """Uploads or replaces profile picture in Supabase"""
+    
+    # Read and validate file
+    file_bytes = in_memory_file.read()
+    kind = filetype.guess(file_bytes)
+    if not kind or not kind.mime.startswith('image/'):
+        raise ValueError("Only image files allowed")
+    
+    # Create filename
+    file_ext = f".{kind.extension}" if kind.extension else ".jpg"
+    filename = f"user_{user_id}/profile{file_ext}"
+    
+    try:
+        # First try to delete existing file if it exists
+        supabase.storage.from_(settings.SUPABASE_STORAGE_BUCKET).remove([filename])
+    except Exception:
+        # If file doesn't exist, continue with upload
+        pass
+    
+    # Upload new file
+    in_memory_file.seek(0)
+    res = supabase.storage.from_(settings.SUPABASE_STORAGE_BUCKET).upload(
+        file=file_bytes,
+        path=filename,
+        file_options={"content-type": kind.mime, "upsert": "True"}  # upsert flag
+    )
+    
+    return supabase.storage.from_(settings.SUPABASE_STORAGE_BUCKET).get_public_url(filename)

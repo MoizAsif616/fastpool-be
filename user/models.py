@@ -36,5 +36,15 @@ class User(models.Model):
       supabase.auth.admin.delete_user(auth_id)
       return True
     return False
+  
+class UserProfile(models.Model):
+  id = models.OneToOneField(User,primary_key=True, on_delete=models.CASCADE)
+  url = models.CharField(max_length=500, blank=True, null=True)
+  
+  class Meta:
+    db_table = 'user_profile'
+  def __str__(self):
+      return f"{self.user.username}'s profile"
+
 
   

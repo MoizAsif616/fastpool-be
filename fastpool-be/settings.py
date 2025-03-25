@@ -45,6 +45,7 @@ INSTALLED_APPS = [
   'user',
   'driver',
   'rider',
+  'vehicle',
 ]
 
 MIDDLEWARE = [
@@ -102,6 +103,9 @@ DATABASES = {
 	}
 }
 
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_STORAGE_BUCKET = os.getenv('SUPABASE_STORAGE_BUCKET')
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

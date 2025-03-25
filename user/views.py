@@ -10,6 +10,8 @@ from rest_framework.exceptions import AuthenticationFailed
 from utils.helper import*
 from django.core.cache import cache
 import uuid
+#import messages module to display messages
+from django.contrib import messages
 # Create your views here.
 
 import logging
@@ -147,3 +149,36 @@ class UserViewSet(viewsets.ModelViewSet):
     user.delete()
 
     return Response(status=status.HTTP_204_NO_CONTENT)
+  
+  
+  @action(detail=True, methods=['post'], url_path='upload-profile-picture')
+  def upload_profile_picture(self, request, pk=None):
+      if not request.FILES.get('profile_picture'):
+          return Response({'error': 'Profile picture is required'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
+      
+      try:
+          # 1. Process file upload
+          file = request.FILES['profile_picture']
+          url = upload_picture(pk, file)
+          
+          # 2. Get or create user profile
+          user = User.objects.get(pk=pk)
+          profile, created = UserProfile.objects.update_or_create(
+              id=user,
+              defaults={'url': url}  # This will create or update the url field
+          )
+          
+          return Response({
+              'status': 'created' if created else 'updated',
+              'user_id': pk,
+              'profile_picture_url': url
+          }, status=status.HTTP_200_OK)
+      
+      except User.DoesNotExist:
+          return Response({'error': 'User not found'},
+                        status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+          print(f"Error saving profile: {str(e)}")
+          return Response({'error': str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
