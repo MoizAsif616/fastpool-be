@@ -29,7 +29,7 @@ SECRET_KEY = 'django-insecure-fcx@nt&zco(yo*a24klev%j2)9-^@l6ai48sge)mw^mrgm#c+8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['10.0.2.2','127.0.0.1']
 
 
 # Application definition
@@ -43,6 +43,9 @@ INSTALLED_APPS = [
 	'django.contrib.staticfiles',
 	'rest_framework',
   'user',
+  'driver',
+  'rider',
+  'vehicle',
 ]
 
 MIDDLEWARE = [
@@ -100,6 +103,9 @@ DATABASES = {
 	}
 }
 
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_STORAGE_BUCKET = os.getenv('SUPABASE_STORAGE_BUCKET')
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators

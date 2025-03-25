@@ -8,12 +8,17 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.decorators import action
 from rest_framework.exceptions import AuthenticationFailed
 from utils.helper import*
-import os
-from supabase import create_client, Client
+from django.core.cache import cache
+import uuid
+#import messages module to display messages
+from django.contrib import messages
 # Create your views here.
 
 import logging
 logger = logging.getLogger(__name__)
+
+from django.views import View
+
 class UserViewSet(viewsets.ModelViewSet):
   queryset = User.objects.all()
   serializer_class = UserSerializer
@@ -75,64 +80,105 @@ class UserViewSet(viewsets.ModelViewSet):
   @action(detail=False, methods=['post'], url_path='resend-otp')
   def resend_otp(self, request):
     email = request.data.get('email')
-    if not email:
-      return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
-    Resend_verification_email(email)
+    resend_verification_email(email)
     return Response(status=status.HTTP_200_OK)
 
-
-  @action(detail=False, methods=['post'], url_path='forgot-password')
-  def forgot_password(self, request):
-      email = request.data.get('email')
-      if not email:
-          return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
-
-      try:
-          # Send a password reset link to the user's email
-          response = supabase.auth.reset_password_for_email(email)
-          logger.info(f"Supabase response: {response}")
+  @action(detail=False, methods=['post'], url_path='request-link')
+  def send_password_reset_link(self, request):
+    email = request.data.get('email')
+    url = request.data.get('url')
+    if not email:
+      return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+      user = User.objects.get(email=email)
+      if user:
+        token = uuid.uuid4().hex
+        cache.set(token, user.email, timeout=5*3600)
+        print("making url")
+        URL = url + '?token=' + token
+        send_password_reset_email(email, URL)
+        return Response(status=status.HTTP_200_OK)
+      else:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+      return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+  @action(detail=False, methods=['post'], url_path='reset')
+  def reset_password(self, request):
+    token = request.data.get('token')
+    password = request.data.get('password')
+    if not token:
+      return Response({'error': 'Token is required'}, status=status.HTTP_400_BAD_REQUEST)
+    if not password:
+      return Response({'error': 'Password is required'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+      email = cache.get(token)
+      if email:
+        sid = get_auth_id(email)
+        print("sid is",sid)
+        print("email is",email)
+        if sid:
+          try:
+            supabase.auth.admin.delete_user(sid)
+          except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
           
-          # Check if the request was successful
-          if response and response.get('error'):
-              return Response({'error': response['error']['message']}, status=status.HTTP_400_BAD_REQUEST)
-          
-          return Response({'message': 'Password reset link sent to your email'}, status=status.HTTP_200_OK)
+          supabase.auth.sign_up({'email': email, 'password':password})
+        else:
+          return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+      else:
+        return Response({'error': 'Invalid email'}, status=status.HTTP_400_BAD_REQUEST)
       
-      except Exception as e:
-          logger.error(f"Error in forgot_password: {str(e)}")
-          return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+      return Response(status=status.HTTP_200_OK)
+    except Exception as e:
+      return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
   
-  @action(detail=False, methods=['post'], url_path='update-password')
-  def update_password(self, request):
-        data = request.data
-        new_password = data.get('new_password')
+  def destroy(self, request, *args, **kwargs):
+    user = self.get_object()  # Get the User instance being deleted
+
+    if hasattr(user, 'rider'):
+      user.rider.delete()  # Directly delete the Rider instance
+
+    if hasattr(user, 'driver'):
+      user.driver.delete()  # Directly delete the Driver instance
+
+    sid = get_auth_id(user.email)
+    if sid:
+      supabase.auth.admin.delete_user(sid)
+
+    user.delete()
+
+    return Response(status=status.HTTP_204_NO_CONTENT)
+  
+  
+  @action(detail=True, methods=['post'], url_path='upload-profile-picture')
+  def upload_profile_picture(self, request, pk=None):
+      if not request.FILES.get('profile_picture'):
+          return Response({'error': 'Profile picture is required'}, 
+                        status=status.HTTP_400_BAD_REQUEST)
       
-        if not new_password :
-            return Response({'error': 'New password and confirm password are required'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            # Get the access token and refresh token from the Authorization header
-            auth_header = request.headers.get('Authorization')
-            if not auth_header or not auth_header.startswith('Bearer '):
-                return Response({'error': 'Invalid or missing access token'}, status=status.HTTP_401_UNAUTHORIZED)
-
-            # Extract the access token and refresh token from the header
-            tokens = auth_header.split(' ')
-            if len(tokens) != 3:
-                return Response({'error': 'Invalid token format. Expected: Bearer <access_token> <refresh_token>'}, status=status.HTTP_400_BAD_REQUEST)
-
-            access_token = tokens[1]
-            refresh_token = tokens[2]
-
-            # Set the access token and refresh token in the Supabase client
-            supabase.auth.set_session(access_token, refresh_token)
-
-            # Use Supabase's API to update the password
-            response = supabase.auth.update_user({'password': new_password})
-            
-            if response.get('error'):
-                return Response({'error': response['error']['message']}, status=status.HTTP_400_BAD_REQUEST)
-            
-            return Response({'message': 'Password updated successfully'}, status=status.HTTP_200_OK)
-        
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+      try:
+          # 1. Process file upload
+          file = request.FILES['profile_picture']
+          url = upload_picture(pk, file)
+          
+          # 2. Get or create user profile
+          user = User.objects.get(pk=pk)
+          profile, created = UserProfile.objects.update_or_create(
+              id=user,
+              defaults={'url': url}  # This will create or update the url field
+          )
+          
+          return Response({
+              'status': 'created' if created else 'updated',
+              'user_id': pk,
+              'profile_picture_url': url
+          }, status=status.HTTP_200_OK)
+      
+      except User.DoesNotExist:
+          return Response({'error': 'User not found'},
+                        status=status.HTTP_404_NOT_FOUND)
+      except Exception as e:
+          print(f"Error saving profile: {str(e)}")
+          return Response({'error': str(e)},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
