@@ -16,6 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
       model = User
       # fields = ['id', 'username', 'email', 'password']
       fields = '__all__'
+      read_only_fields = ['id', 'email']
 
     def create(self, validated_data):
       print("UserSerializer: create called")
@@ -45,8 +46,3 @@ class UserSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError(rider_serializer.errors)
 
       return user
-
-    def update(self, instance, validated_data):
-      print("UserSerializer: update called")
-      validated_data.pop('email', None)
-      return super().update(instance, validated_data)

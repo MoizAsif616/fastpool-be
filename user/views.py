@@ -18,6 +18,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 from django.views import View
+from driver.models import *
+from rider.models import Rider
 
 class UserViewSet(viewsets.ModelViewSet):
   queryset = User.objects.all()
@@ -151,34 +153,221 @@ class UserViewSet(viewsets.ModelViewSet):
     return Response(status=status.HTTP_204_NO_CONTENT)
   
   
-  @action(detail=True, methods=['post'], url_path='upload-profile-picture')
-  def upload_profile_picture(self, request, pk=None):
-      if not request.FILES.get('profile_picture'):
-          return Response({'error': 'Profile picture is required'}, 
-                        status=status.HTTP_400_BAD_REQUEST)
+  @action(detail=False, methods=['post'], url_path='profile/edit-profile-picture')
+  def edit_profile_picture(self, request):
+    ## Extract token from header
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+      return Response(
+        {'error': 'Bearer token required'},
+        status=status.HTTP_401_UNAUTHORIZED
+      )
+    
+    token = auth_header.split()[1]
+
+    ## Verify token with Supabase and get user email
+    try:
+      user_info = supabase.auth.get_user(token)  # Supabase token verification
+      email = user_info.user.email
+    except Exception as e:
+      return Response(
+        {'error': 'Invalid token', 'details': str(e)},
+        status=status.HTTP_401_UNAUTHORIZED
+      )
+
+    ## Get user from database
+    try:
+      user = User.objects.get(email=email)
+    except User.DoesNotExist:
+      return Response(
+        {'error': 'User not found'},
+        status=status.HTTP_404_NOT_FOUND
+      )
+
+    ## Check if profile picture is provided
+    if not request.FILES.get('profile_picture'):
+      return Response({'error': 'Profile picture is required'}, 
+                      status=status.HTTP_400_BAD_REQUEST)
+    
+    try:
+      # Process file upload
+      file = request.FILES['profile_picture']
+      url = upload_picture(user.id, file)
       
-      try:
-          # 1. Process file upload
-          file = request.FILES['profile_picture']
-          url = upload_picture(pk, file)
-          
-          # 2. Get or create user profile
-          user = User.objects.get(pk=pk)
-          profile, created = UserProfile.objects.update_or_create(
-              id=user,
-              defaults={'url': url}  # This will create or update the url field
-          )
-          
-          return Response({
-              'status': 'created' if created else 'updated',
-              'user_id': pk,
-              'profile_picture_url': url
-          }, status=status.HTTP_200_OK)
+      # Get or create user profile
+      profile, created = UserProfile.objects.update_or_create(
+        id=user,
+        defaults={'url': url}  # This will create or update the url field
+      )
+        
+      return Response({
+        'status': 'created' if created else 'updated',
+        'user_id': user.id,
+        'profile_picture_url': url
+      }, status=status.HTTP_200_OK)
+    
+    except Exception as e:
+      print(f"Error saving profile: {str(e)}")
+      return Response({'error': str(e)},
+                      status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+  @action(detail=False, methods=['get'], url_path='profile')
+  def get_profile(self, request):
+    ## Extract token from header
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+      return Response(
+        {'error': 'Bearer token required'},
+        status=status.HTTP_401_UNAUTHORIZED
+      )
+    
+    token = auth_header.split()[1]
+
+    ## Verify token with Supabase and get user email
+    try:
+      user_info = supabase.auth.get_user(token)  # Supabase token verification
+      email = user_info.user.email
+    except Exception as e:
+      return Response(
+        {'error': 'Invalid token', 'details': str(e)},
+        status=status.HTTP_401_UNAUTHORIZED
+      )
+
+    ## Get user from database
+    try:
+      user = User.objects.get(email=email)
+    except User.DoesNotExist:
+      return Response(
+        {'error': 'User not found'},
+        status=status.HTTP_404_NOT_FOUND
+      )
+
+    ## Fetch role from request body
+    role = request.data.get('role')
+    if not role:
+      return Response(
+        {'error': 'Role is required'},
+        status=status.HTTP_400_BAD_REQUEST
+      )
+
+    profile_data = {
+      'id': user.id,
+      'email': user.email,
+      'username': user.username,
+      'phone': user.phone,
+      'gender': user.gender
+    }
+
+    # Fetch profile picture
+    try:
+      profile = UserProfile.objects.get(id=user.id)
+      profile_data['profile_picture_url'] = profile.url
+    except UserProfile.DoesNotExist:
+      profile_data['profile_picture_url'] = None
+
+    try:
+      if role == 'driver':
+        # Fetch driver-specific data
+        driver = Driver.objects.get(id=user.id)
+        profile_data['no_of_ratings'] = driver.no_of_ratings
+        profile_data['ratings'] = driver.ratings
+
+        # Fetch vehicle information
+        vehicles = Vehicle.objects.filter(user_id=user.id)
+        profile_data['vehicles'] = [
+          {
+            'name': vehicle.name,
+            'registration_number': vehicle.registration_number,
+            'type': vehicle.type,
+            'capacity': vehicle.capacity,
+            'AC': vehicle.AC
+          }
+          for vehicle in vehicles
+        ]
+      elif role == 'rider':
+        # Fetch rider-specific data
+        rider = Rider.objects.get(id=user.id)
+        profile_data['no_of_ratings'] = rider.no_of_ratings
+        profile_data['ratings'] = rider.ratings
+      else:
+        return Response(
+          {'error': 'Invalid role. Role must be either "driver" or "rider".'},
+          status=status.HTTP_400_BAD_REQUEST
+        )
+    except Driver.DoesNotExist:
+      return Response(
+        {'error': 'Driver profile not found'},
+        status=status.HTTP_404_NOT_FOUND
+      )
+    except Rider.DoesNotExist:
+      return Response(
+        {'error': 'Rider profile not found'},
+        status=status.HTTP_404_NOT_FOUND
+      )
+    except Exception as e:
+      return Response(
+        {'error': 'An unexpected error occurred', 'details': str(e)},
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+      )
+
+    return Response(profile_data, status=status.HTTP_200_OK)
+
+  @action(detail=False, methods=['post'], url_path='profile/edit')
+  def edit_profile(self, request):
+    ## Extract token from header
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+      return Response(
+        {'error': 'Bearer token required'},
+        status=status.HTTP_401_UNAUTHORIZED
+      )
+    
+    token = auth_header.split()[1]
+
+    ## Verify token with Supabase and get user email
+    try:
+      user_info = supabase.auth.get_user(token)
+      email = user_info.user.email
+    except Exception as e:
+      return Response(
+        {'error': 'Invalid token', 'details': str(e)},
+        status=status.HTTP_401_UNAUTHORIZED
+      )
+
+    ## Get user from database
+    try:
+      user = User.objects.get(email=email)
+    except User.DoesNotExist:
+      return Response(
+        {'error': 'User not found'},
+        status=status.HTTP_404_NOT_FOUND
+      )
+
+    ## Update user data using serializer
+    try:
+      serializer = self.get_serializer(
+        user,
+        data=request.data,
+        partial=True  # Allows partial updates
+      )
+      serializer.is_valid(raise_exception=True)
+      serializer.save()
       
-      except User.DoesNotExist:
-          return Response({'error': 'User not found'},
-                        status=status.HTTP_404_NOT_FOUND)
-      except Exception as e:
-          print(f"Error saving profile: {str(e)}")
-          return Response({'error': str(e)},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+      return Response(
+        {
+          'message': 'Profile updated successfully',
+          'data': serializer.data
+        },
+        status=status.HTTP_200_OK
+      )
+      
+    except ValidationError as e:
+      return Response(
+        {'error': 'Validation error', 'details': e.detail},
+        status=status.HTTP_400_BAD_REQUEST
+      )
+    except Exception as e:
+      return Response(
+        {'error': 'An error occurred while updating the profile', 'details': str(e)},
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+      )

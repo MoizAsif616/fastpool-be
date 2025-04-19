@@ -7,7 +7,8 @@ class Rider(models.Model):
   id = models.OneToOneField(
     User, 
     on_delete=models.CASCADE, 
-    primary_key=True  # Use the User's Supabase ID as the primary key
+    primary_key=True,  # Use the User's Supabase ID as the primary key
+    db_column='id'
   )
   no_of_ratings = models.IntegerField(default=0)
   ratings = models.FloatField(default=0.0)
