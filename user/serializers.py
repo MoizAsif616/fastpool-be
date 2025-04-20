@@ -16,7 +16,7 @@ class UserSerializer(serializers.ModelSerializer):
       model = User
       # fields = ['id', 'username', 'email', 'password']
       fields = '__all__'
-      read_only_fields = ['id', 'email']
+      read_only_fields = ['id']
 
     def create(self, validated_data):
       print("UserSerializer: create called")
