@@ -8,6 +8,7 @@ from rest_framework.exceptions import MethodNotAllowed
 from rest_framework.decorators import action
 from rest_framework.exceptions import AuthenticationFailed
 from utils.helper import*
+from utils.decorators import auth_required
 from django.core.cache import cache
 import uuid
 #import messages module to display messages
@@ -154,30 +155,10 @@ class UserViewSet(viewsets.ModelViewSet):
   
   
   @action(detail=False, methods=['post'], url_path='profile/edit-profile-picture')
+  @auth_required
   def edit_profile_picture(self, request):
-    ## Extract token from header
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-      return Response(
-        {'error': 'Bearer token required'},
-        status=status.HTTP_401_UNAUTHORIZED
-      )
-    
-    token = auth_header.split()[1]
-
-    ## Verify token with Supabase and get user email
     try:
-      user_info = supabase.auth.get_user(token)  # Supabase token verification
-      email = user_info.user.email
-    except Exception as e:
-      return Response(
-        {'error': 'Invalid token', 'details': str(e)},
-        status=status.HTTP_401_UNAUTHORIZED
-      )
-
-    ## Get user from database
-    try:
-      user = User.objects.get(email=email)
+      user = User.objects.get(pk = request.user_id)
     except User.DoesNotExist:
       return Response(
         {'error': 'User not found'},
@@ -212,44 +193,27 @@ class UserViewSet(viewsets.ModelViewSet):
                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
   @action(detail=False, methods=['get'], url_path='profile')
+  @auth_required
   def get_profile(self, request):
-    ## Extract token from header
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
+
+    ## Fetch role from query parameters
+    role = request.query_params.get('role')
+    if not role:
       return Response(
-        {'error': 'Bearer token required'},
-        status=status.HTTP_401_UNAUTHORIZED
+        {'error': 'Role is required as a query parameter'},
+        status=status.HTTP_400_BAD_REQUEST
       )
     
-    token = auth_header.split()[1]
-
-    ## Verify token with Supabase and get user email
+    # Fetch user from the database
     try:
-      user_info = supabase.auth.get_user(token)  # Supabase token verification
-      email = user_info.user.email
-    except Exception as e:
-      return Response(
-        {'error': 'Invalid token', 'details': str(e)},
-        status=status.HTTP_401_UNAUTHORIZED
-      )
-
-    ## Get user from database
-    try:
-      user = User.objects.get(email=email)
+      user = User.objects.get(id=request.user_id)
     except User.DoesNotExist:
       return Response(
         {'error': 'User not found'},
         status=status.HTTP_404_NOT_FOUND
       )
 
-    ## Fetch role from request body
-    role = request.data.get('role')
-    if not role:
-      return Response(
-        {'error': 'Role is required'},
-        status=status.HTTP_400_BAD_REQUEST
-      )
-
+    # Assign profile data from the user object
     profile_data = {
       'id': user.id,
       'email': user.email,
@@ -260,7 +224,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     # Fetch profile picture
     try:
-      profile = UserProfile.objects.get(id=user.id)
+      profile = UserProfile.objects.get(id=request.user_id)
       profile_data['profile_picture_url'] = profile.url
     except UserProfile.DoesNotExist:
       profile_data['profile_picture_url'] = None
@@ -268,12 +232,12 @@ class UserViewSet(viewsets.ModelViewSet):
     try:
       if role == 'driver':
         # Fetch driver-specific data
-        driver = Driver.objects.get(id=user.id)
+        driver = Driver.objects.get(id=request.user_id)
         profile_data['no_of_ratings'] = driver.no_of_ratings
         profile_data['ratings'] = driver.ratings
 
         # Fetch vehicle information
-        vehicles = Vehicle.objects.filter(user_id=user.id)
+        vehicles = Vehicle.objects.filter(user_id=request.user_id)
         profile_data['vehicles'] = [
           {
             'name': vehicle.name,
@@ -286,7 +250,7 @@ class UserViewSet(viewsets.ModelViewSet):
         ]
       elif role == 'rider':
         # Fetch rider-specific data
-        rider = Rider.objects.get(id=user.id)
+        rider = Rider.objects.get(id=request.user_id)
         profile_data['no_of_ratings'] = rider.no_of_ratings
         profile_data['ratings'] = rider.ratings
       else:
@@ -313,36 +277,16 @@ class UserViewSet(viewsets.ModelViewSet):
     return Response(profile_data, status=status.HTTP_200_OK)
 
   @action(detail=False, methods=['post'], url_path='profile/edit')
+  @auth_required
   def edit_profile(self, request):
-    ## Extract token from header
-    auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-      return Response(
-        {'error': 'Bearer token required'},
-        status=status.HTTP_401_UNAUTHORIZED
-      )
-    
-    token = auth_header.split()[1]
 
-    ## Verify token with Supabase and get user email
     try:
-      user_info = supabase.auth.get_user(token)
-      email = user_info.user.email
-    except Exception as e:
-      return Response(
-        {'error': 'Invalid token', 'details': str(e)},
-        status=status.HTTP_401_UNAUTHORIZED
-      )
-
-    ## Get user from database
-    try:
-      user = User.objects.get(email=email)
+      user = User.objects.get(pk = request.user_id)
     except User.DoesNotExist:
       return Response(
         {'error': 'User not found'},
         status=status.HTTP_404_NOT_FOUND
       )
-
     ## Update user data using serializer
     try:
       serializer = self.get_serializer(
