@@ -17,7 +17,7 @@ class DriverViewSet(viewsets.ModelViewSet):
     try:
       # Add user_id to the request data
       vehicle_data = request.data.copy()
-      vehicle_data['user_id'] = request.user_id
+      vehicle_data['driver'] = request.user_id
 
       serializer = VehicleSerializer(data=vehicle_data)
       serializer.is_valid(raise_exception=True)

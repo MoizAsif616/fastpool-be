@@ -1,14 +1,12 @@
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.conf import settings
-
-from django.db import models
-from django.contrib.postgres.fields import ArrayField
-from django.conf import settings
+from user.models import User
+from driver.models import Vehicle
 
 class Ride(models.Model):
     driver = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+        User, 
         on_delete=models.CASCADE,
         related_name='offered_rides'
     )
@@ -17,19 +15,22 @@ class Ride(models.Model):
     destination_lat = models.FloatField()
     destination_lng = models.FloatField()  
     vehicle = models.ForeignKey(
-        'Vehicle',  # Reference to Vehicle model
+        Vehicle,  
         on_delete=models.PROTECT,
         related_name='rides'
     )
     time = models.DateTimeField()
-    capacity = models.PositiveIntegerField(default=1)  # Added capacity fiel
+    capacity = models.PositiveIntegerField(default=1) 
     available_seats = models.PositiveIntegerField()
     amount = models.PositiveIntegerField(default=0)  
     preferred_gender = models.CharField(
         choices=[('Male', 'Male'), ('Female', 'Female'), ('Any', 'Any')],
         default='Any'
     )
-    payment_option = models.CharField(max_length=50)
+    payment_option = models.CharField(
+        choices=[('Cash', 'Cash'), ('Online', 'Online'), ('Any', 'Any')],
+        default='Any'
+    )
     expiration_time = models.DateTimeField()
     date = models.DateField()
     description = models.TextField(blank=True, null=True)
@@ -41,8 +42,8 @@ class Ride(models.Model):
     )
 
     class Meta:
-        db_table = 'rides' 
+        db_table = 'ride' 
 
     def __str__(self):
         return f"Ride from ({self.source_lat}, {self.source_lng}) to ({self.destination_lat}, {self.destination_lng}) at {self.time}"
-  
+
