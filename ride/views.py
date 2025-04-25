@@ -228,3 +228,12 @@ class RideViewSet(viewsets.ModelViewSet):
       )
 
 
+class RideHistoryListApiView(generics.ListAPIView):
+  queryset = RideHistory.objects.all()
+  lookup_field = "riderId"
+  serializer_class = RideHistorySerializer
+  pagination_class = GlobalIdCursorPagination
+
+  def get_queryset(self):
+    query_set = super().get_queryset()
+    return query_set.filter(riderId=self.request.user_id)
