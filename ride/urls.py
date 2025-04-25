@@ -1,10 +1,9 @@
 from django.urls import path, include
-from .views import *
 from rest_framework.routers import DefaultRouter
-from .serializers import *
+from .views import RideViewSet
 
 router = DefaultRouter()
-router.register(r'', UserViewSet, basename='user')
+router.register(r'', RideViewSet, basename='ride')
 
 urlpatterns = [
   path('', include(router.urls)),

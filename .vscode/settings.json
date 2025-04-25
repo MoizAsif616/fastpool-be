@@ -1,0 +1,8 @@
+{
+  "editor.tabSize": 2,
+  "editor.tabFocusMode": true,
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabCompletion": "on",
+  "editor.inlineCompletionsAccessibilityVerbose": true
+}

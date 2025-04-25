@@ -18,25 +18,7 @@ class User(models.Model):
   def __str__(self):
     return self.username
   
-  def update_password(self, new_password):
-    # Update password in Supabase Auth
-    auth_id = self.get_auth_id()
-    if auth_id:
-      supabase.auth.admin.update_user_by_id(
-        uid=auth_id,
-        attributes={'password': new_password}
-      )
-      return True
-    return False
-  
-  def delete_auth_record(self):
-    # Delete user from Supabase Auth
-    auth_id = self.get_auth_id()
-    if auth_id:
-      supabase.auth.admin.delete_user(auth_id)
-      return True
-    return False
-  
+
 class UserProfile(models.Model):
   id = models.OneToOneField(User,primary_key=True, on_delete=models.CASCADE)
   url = models.CharField(max_length=500, blank=True, null=True)

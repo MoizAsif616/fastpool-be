@@ -45,6 +45,7 @@ INSTALLED_APPS = [
   'user',
   'driver',
   'rider',
+  'ride',
 ]
 
 MIDDLEWARE = [
@@ -158,7 +159,10 @@ REST_FRAMEWORK = {
 	# ],
 	# 'DEFAULT_RENDERER_CLASSES': [
 	# 	'rest_framework.renderers.JSONRenderer',
-	# ]
+# ]
+  'DEFAULT_PAGINATION_CLASS': 'utils.pagination.GlobalIdCursorPagination',
+  'PAGE_SIZE': 10, 
+   
 }
 
 CACHE={
