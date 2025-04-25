@@ -42,8 +42,9 @@ class Ride(models.Model):
     )
 
     class Meta:
-        db_table = 'ride' 
+      ordering = ['-id']
+      db_table = 'ride' 
 
     def __str__(self):
-        return f"Ride from ({self.source_lat}, {self.source_lng}) to ({self.destination_lat}, {self.destination_lng}) at {self.time}"
+      return f"Ride from ({self.source_lat}, {self.source_lng}) to ({self.destination_lat}, {self.destination_lng}) at {self.time}"
 

@@ -32,14 +32,13 @@ class UserViewSet(viewsets.ModelViewSet):
   
   @action(detail=False, methods=['post'], url_path='signup')
   def signup(self, request):
+
     serializer = self.get_serializer(data=request.data)
     if serializer.is_valid():
       send_verification_email(request.data.get('username'), request.data.get('email'))
       return Response(status=status.HTTP_200_OK)
-    return Response(status=status.HTTP_400_BAD_REQUEST)
+    return Response({"error": "Invalid data"},status=status.HTTP_400_BAD_REQUEST)
   
-    
-
   @action(detail=False, methods=['post'], url_path='login')
   def login(self, request):
     email = request.data.get('email')
@@ -154,7 +153,7 @@ class UserViewSet(viewsets.ModelViewSet):
     return Response(status=status.HTTP_204_NO_CONTENT)
   
   
-  @action(detail=False, methods=['post'], url_path='profile/edit-profile-picture')
+  @action(detail=False, methods=['put'], url_path='profile/edit-profile-picture')
   @auth_required
   def edit_profile_picture(self, request):
     try:
@@ -276,7 +275,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
     return Response(profile_data, status=status.HTTP_200_OK)
 
-  @action(detail=False, methods=['post'], url_path='profile/edit')
+  @action(detail=False, methods=['put'], url_path='profile/edit')
   @auth_required
   def edit_profile(self, request):
 

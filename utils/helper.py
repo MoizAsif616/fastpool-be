@@ -16,6 +16,7 @@ def generate_Otp():
 
 def send_verification_email(username, email):
 	try:
+		print("Sending email to:", email)
 		otp = generate_Otp()
 		cache_key = f'otp_{email}'
 		cache.set(cache_key, otp, timeout=120) # 2 minutes
@@ -27,6 +28,7 @@ def send_verification_email(username, email):
 
 		send_mail(subject, plain_message, from_email, [to], html_message=html_message)
 	except Exception as e:
+		print("Error sending email:", e)
 		raise e
 	
 def resend_verification_email(email):

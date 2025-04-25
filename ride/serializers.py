@@ -2,23 +2,38 @@ from rest_framework import serializers
 from .models import Ride
 from user.serializers import UserSerializer  # Import UserSerializer
 from driver.serializers import VehicleSerializer  # Import VehicleSerializer
+from user.models import User 
 
 class RideSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Ride
-        fields = '__all__'  # Include all fields
+  class Meta:
+    model = Ride
+    fields = '__all__'
+    extra_kwargs = {
+      'driver': {'read_only': True}  
+    }
 
-    def to_representation(self, instance):
-        representation = super().to_representation(instance)
-        representation.pop('id', None)
-        # Replace driver and vehicle IDs with their full objects
-        representation['driver'] = UserSerializer(instance.driver).data
-        representation['vehicle'] = VehicleSerializer(instance.vehicle).data
-        
-        return representation
+  def to_representation(self, instance):
+    representation = super().to_representation(instance)
+    role = self.context.get('role')  # Get role from serializer context
 
-    def update(self, instance, validated_data):
-        # Prevent updating driver and vehicle
-        validated_data.pop('driver', None)
-        validated_data.pop('vehicle', None)
-        return super().update(instance, validated_data)
+    if role == 'rider':
+      representation['driver'] = UserSerializer(instance.driver).data
+    elif role == 'driver':
+      representation.pop('driver', None)  # Remove driver data from response
+
+    representation['vehicle'] = VehicleSerializer(instance.vehicle).data
+
+    # Fetch rider information using UserSerializer
+    rider_ids = representation.get('riders', [])
+    riders_info = []
+ 
+    for rider_id in rider_ids:
+      try:
+        user = User.objects.get(id=rider_id)
+        riders_info.append(UserSerializer(user).data)
+      except User.DoesNotExist:
+        continue
+    representation['riders'] = riders_info
+
+    return representation
+
