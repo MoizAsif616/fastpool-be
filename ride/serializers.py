@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ride
+from .models import Ride, RideHistory
 from user.serializers import UserSerializer  # Import UserSerializer
 from driver.serializers import VehicleSerializer  # Import VehicleSerializer
 from user.models import User 
@@ -36,4 +36,11 @@ class RideSerializer(serializers.ModelSerializer):
     representation['riders'] = riders_info
 
     return representation
+  
+  
+class RideHistorySerializer(serializers.ModelSerializer):
+  class Meta:
+    model = RideHistory
+    exclude = ["riderId"]
+    
 
