@@ -55,7 +55,6 @@ class UserViewSet(viewsets.ModelViewSet):
       refresh_token = response.session.refresh_token
 
       return Response({
-        'user_id': user.id,
         'access_token': access_token,
         'refresh_token': refresh_token
       }, status=status.HTTP_200_OK)
