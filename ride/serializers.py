@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Ride
+from .models import *
 from user.serializers import UserSerializer  # Import UserSerializer
 from driver.serializers import VehicleSerializer  # Import VehicleSerializer
 from user.models import User 
@@ -8,9 +8,6 @@ class RideSerializer(serializers.ModelSerializer):
   class Meta:
     model = Ride
     fields = '__all__'
-    extra_kwargs = {
-      'driver': {'read_only': True}  
-    }
 
   def to_representation(self, instance):
     representation = super().to_representation(instance)
@@ -37,3 +34,18 @@ class RideSerializer(serializers.ModelSerializer):
 
     return representation
 
+
+class RideRequestSerializer(serializers.ModelSerializer):
+  class Meta:
+    model = RideRequest
+    fields = '__all__'
+
+  def to_representation(self, instance):
+    representation = super().to_representation(instance)
+    role = self.context.get('role')  # Get role from serializer context
+
+    if role == 'driver':
+      # Replace rider ID with full rider information
+      representation['rider'] = UserSerializer(instance.rider).data
+
+    return representation
