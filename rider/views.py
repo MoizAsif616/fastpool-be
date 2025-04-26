@@ -1,5 +1,5 @@
 from rest_framework.generics import ListAPIView
-from .permissions import SupabaseAuthenticated
+from ..utils.permissions import SupabaseAuthenticated
 from ride.serializers import RideHistorySerializer
 from ride.models import RideHistory
 
