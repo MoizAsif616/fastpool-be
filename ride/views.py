@@ -227,7 +227,21 @@ class RideViewSet(viewsets.ModelViewSet):
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
 
-
+# This function will be called implicitly by the server after a ride request for a certain rider is accepted.
+def createRideHistory(data):
+   ride_history = RideHistory.objects.create(
+            riderId=data.riderId,
+            source_lat=data.source_lat,
+            source_lng=data.source_lng,
+            destination_lat=data.destination_lat,
+            destination_lng=data.destination_lng,
+            date=data.date,
+            time=data.time
+        )
+   if ride_history:
+     return True
+   else: return False
+  
 
 
   
