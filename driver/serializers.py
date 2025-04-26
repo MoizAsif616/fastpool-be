@@ -12,13 +12,13 @@ class DriverSerializer(serializers.ModelSerializer):
     return representation
 
 class VehicleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Vehicle
-        fields = ['driver', 'name', 'registration_number', 'type', 'capacity', 'AC']
-        extra_kwargs = {
-            'driver': {'required': True},
-            'name': {'required': True},
-            'registration_number': {'required': True},
-            'type': {'required': True},
-            'capacity': {'required': True},
-        }
+  class Meta:
+    model = Vehicle
+    fields = ['driver', 'name', 'registration_number', 'type', 'capacity', 'AC']
+    extra_kwargs = {
+      'driver': {'required': True},
+      'name': {'required': True},
+      'registration_number': {'required': True},
+      'type': {'required': True},
+      'capacity': {'required': True},
+    }

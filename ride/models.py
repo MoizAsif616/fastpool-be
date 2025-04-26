@@ -12,10 +12,14 @@ class Ride(models.Model):
     source_lat = models.FloatField()
     source_lng = models.FloatField()
     destination_lat = models.FloatField()
-    destination_lng = models.FloatField()
-    vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name="rides")
-    time = models.DateTimeField()
-    capacity = models.PositiveIntegerField(default=1)
+    destination_lng = models.FloatField()  
+    vehicle = models.ForeignKey(
+        Vehicle,  
+        on_delete=models.PROTECT,
+        related_name='rides'
+    )
+    time = models.TimeField()
+    capacity = models.PositiveIntegerField(default=1) 
     available_seats = models.PositiveIntegerField()
     amount = models.PositiveIntegerField(default=0)
     preferred_gender = models.CharField(
@@ -24,7 +28,7 @@ class Ride(models.Model):
     payment_option = models.CharField(
         choices=[("Cash", "Cash"), ("Online", "Online"), ("Any", "Any")], default="Any"
     )
-    expiration_time = models.DateTimeField()
+    expiration_time = models.TimeField()
     date = models.DateField()
     description = models.TextField(blank=True, null=True)
     riders = ArrayField(
@@ -41,6 +45,22 @@ class Ride(models.Model):
     def __str__(self):
         return f"Ride from ({self.source_lat}, {self.source_lng}) to ({self.destination_lat}, {self.destination_lng}) at {self.time}"
 
+class RideRequest(models.Model):
+  ride = models.ForeignKey('ride.Ride', on_delete=models.CASCADE, related_name='requests')
+  rider = models.ForeignKey('user.User', on_delete=models.CASCADE, related_name='requests')
+  pickup_lat = models.FloatField()
+  pickup_lng = models.FloatField()
+  pickup_time = models.TimeField()
+  status = models.CharField(choices=[
+    ('pending', 'Pending'),
+    ('accepted', 'Accepted'),
+    ('rejected', 'Rejected'),
+    ('completed', 'Completed')
+  ], default='pending')
+
+  class Meta:
+    db_table = 'ride_request'
+    ordering = ['id']
 
 class RideHistory(models.Model):
     riderId = models.ForeignKey(
@@ -52,3 +72,4 @@ class RideHistory(models.Model):
     destination_lng = models.FloatField()
     date = models.DateField()
     time = models.TimeField()
+
