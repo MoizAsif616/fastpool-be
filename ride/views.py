@@ -236,7 +236,6 @@ class RideViewSet(viewsets.ModelViewSet):
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
 
-
 class RideRequestViewSet(viewsets.ModelViewSet):
   queryset = RideRequest.objects.all()
   serializer_class = RideRequestSerializer
@@ -315,6 +314,22 @@ class RideRequestViewSet(viewsets.ModelViewSet):
           {'error': 'Ride does not exist'},
           status=status.HTTP_404_NOT_FOUND
         )
+
+      # Check if the user already has a request for this ride
+      existing_request = RideRequest.objects.filter(ride=ride, rider=request.user_id).first()
+      if existing_request:
+        if existing_request.status != 'denied':
+          return Response(
+            {'error': 'Your previous request is not denied'},
+            status=status.HTTP_400_BAD_REQUEST
+          )
+        else:
+          # If the status is denied, check if there are available seats
+          if ride.available_seats <= 0:
+            return Response(
+              {'error': 'No available seats in the ride'},
+              status=status.HTTP_400_BAD_REQUEST
+            )
 
       # Check if the ride has available seats
       if ride.available_seats == 0:
@@ -466,13 +481,30 @@ class RideRequestViewSet(viewsets.ModelViewSet):
           {'error': 'No available seats in the ride'},
           status=status.HTTP_400_BAD_REQUEST
         )
+      
+      rider = UserSerializer(ride_request.rider).data
 
-      ride_request.status = 'accepted'
-      ride_request.save()
-
-      ride.available_seats -= 1
-      ride.riders.append(ride_request.rider.id)  
-      ride.save()
+      history_record = {
+        'riderId': ride_request.rider,
+        'source_lat': ride_request.pickup_lat,
+        'source_lng': ride_request.pickup_lng,
+        'destination_lat': ride.destination_lat,
+        'destination_lng': ride.destination_lng,
+        'date': ride.date,
+        'time': ride.time
+      }
+      print("History Record: ", history_record)
+      if createRideHistory(history_record):
+        ride_request.status = 'accepted'
+        ride_request.save()
+        ride.available_seats -= 1
+        ride.riders.append(ride_request.rider.id)  
+        ride.save()  
+      else:
+        return Response(
+          {'error': 'An error occurred while accepting the ride request', 'details': str(e)},
+          status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
       if ride.available_seats == 0:
         RideRequest.objects.filter(ride=ride, status='pending').update(status='capacity-full')
@@ -489,17 +521,20 @@ class RideRequestViewSet(viewsets.ModelViewSet):
 
 # This function will be called implicitly by the server after a ride request for a certain rider is accepted.
 def createRideHistory(data):
-   ride_history = RideHistory.objects.create(
-            riderId=data.riderId,
-            source_lat=data.source_lat,
-            source_lng=data.source_lng,
-            destination_lat=data.destination_lat,
-            destination_lng=data.destination_lng,
-            date=data.date,
-            time=data.time
-        )
-   if ride_history:
-     return True
-   else: return False
   
+  ride_history = RideHistory.objects.create(
+  riderId=data['riderId'],  
+  source_lat=data['source_lat'],
+  source_lng=data['source_lng'],
+  destination_lat=data['destination_lat'],
+  destination_lng=data['destination_lng'],
+  date=data['date'],
+  time=data['time']
+  )
+  if ride_history:
+    return True
+  else:
+    return False
+
+
 
