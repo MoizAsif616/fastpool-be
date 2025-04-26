@@ -34,10 +34,9 @@ class UserViewSet(viewsets.ModelViewSet):
   def signup(self, request):
 
     serializer = self.get_serializer(data=request.data)
-    if serializer.is_valid():
+    if serializer.is_valid(raise_exception = True):
       send_verification_email(request.data.get('username'), request.data.get('email'))
       return Response(status=status.HTTP_200_OK)
-    return Response({"error": "Invalid data"},status=status.HTTP_400_BAD_REQUEST)
   
   @action(detail=False, methods=['post'], url_path='login')
   def login(self, request):

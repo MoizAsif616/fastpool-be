@@ -33,6 +33,13 @@ class RideSerializer(serializers.ModelSerializer):
     representation['riders'] = riders_info
 
     return representation
+  
+  
+class RideHistorySerializer(serializers.ModelSerializer):
+  class Meta:
+    model = RideHistory
+    exclude = ["riderId"]
+    
 
 
 class RideRequestSerializer(serializers.ModelSerializer):
