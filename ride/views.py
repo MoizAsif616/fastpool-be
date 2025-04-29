@@ -253,9 +253,20 @@ class RideRequestViewSet(viewsets.ModelViewSet):
     elif role == 'driver':
       ride_id = self.request.query_params.get('id')
       if not ride_id:
-          return queryset.none()  # Return empty if no ride_id for driver
-      queryset = queryset.filter(ride_id=ride_id, ride__driver=self.request.user_id)
-    
+        return queryset.none()  # Return empty if no ride_id for driver
+
+      try:
+        ride = Ride.objects.get(pk=ride_id, driver=self.request.user_id)
+      except Ride.DoesNotExist:
+        return queryset.none()  # Return empty if the ride does not exist or the user is not the driver
+
+      if ride.available_seats > 0:
+        # Show requests with status 'pending' or 'accepted' when seats are available
+        queryset = queryset.filter(ride_id=ride_id, status__in=['pending', 'accepted'])
+      else:
+        # Show only 'accepted' requests when no seats are available
+        queryset = queryset.filter(ride_id=ride_id, status='accepted')
+
     return queryset
 
   def get_serializer_context(self):
