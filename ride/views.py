@@ -11,9 +11,11 @@ from utils.helper import*
 from utils.decorators import auth_required
 from driver.models import Vehicle
 from utils.pagination import GlobalIdCursorPagination
+from utils.permissions import SupabaseAuthenticated
 # Create your views here.
 
 class RideViewSet(viewsets.ModelViewSet):
+  permission_classes= [SupabaseAuthenticated]
   queryset = Ride.objects.all()
   serializer_class = RideSerializer
 
@@ -39,7 +41,7 @@ class RideViewSet(viewsets.ModelViewSet):
     context['role'] = getattr(self, 'role', None)  # Pass role to serializer context
     return context
 
-  @auth_required
+  # @auth_required
   def list(self, request, *args, **kwargs):
     try:
       if not request.query_params.get('role'):
