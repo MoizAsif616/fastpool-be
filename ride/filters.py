@@ -1,4 +1,5 @@
 # ride/filters.py
+from django.db.models import Q
 import django_filters
 from .models import Ride
 
@@ -29,6 +30,11 @@ class RideFilter(django_filters.FilterSet):
     # Text search in description
     description = django_filters.CharFilter(
         field_name="description", lookup_expr="icontains"
+    )
+
+    # New: Search by driver's username
+    driver_username = django_filters.CharFilter(
+        field_name="driver__username", lookup_expr="icontains"
     )
 
     class Meta:
