@@ -14,7 +14,7 @@ class Ride(models.Model):
     destination_lat = models.FloatField()
     destination_lng = models.FloatField()
     vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name="rides")
-    time = models.DateTimeField()
+    time = models.TimeField()
     capacity = models.PositiveIntegerField(default=1)
     available_seats = models.PositiveIntegerField()
     amount = models.PositiveIntegerField(default=0)
@@ -24,7 +24,7 @@ class Ride(models.Model):
     payment_option = models.CharField(
         choices=[("Cash", "Cash"), ("Online", "Online"), ("Any", "Any")], default="Any"
     )
-    expiration_time = models.DateTimeField()
+    expiration_time = models.TimeField()
     date = models.DateField()
     description = models.TextField(blank=True, null=True)
     riders = ArrayField(
