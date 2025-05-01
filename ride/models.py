@@ -12,14 +12,12 @@ class Ride(models.Model):
     source_lat = models.FloatField()
     source_lng = models.FloatField()
     destination_lat = models.FloatField()
-    destination_lng = models.FloatField()  
-    vehicle = models.ForeignKey(
-        Vehicle,  
-        on_delete=models.PROTECT,
-        related_name='rides'
-    )
+
+    destination_lng = models.FloatField()
+    vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT, related_name="rides")
     time = models.TimeField()
-    capacity = models.PositiveIntegerField(default=1) 
+    capacity = models.PositiveIntegerField(default=1)
+
     available_seats = models.PositiveIntegerField()
     amount = models.PositiveIntegerField(default=0)
     preferred_gender = models.CharField(

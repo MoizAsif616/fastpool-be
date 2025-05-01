@@ -1,7 +1,8 @@
 from rest_framework.generics import ListAPIView
-from .permissions import SupabaseAuthenticated
-from ride.serializers import RideHistorySerializer
-from ride.models import RideHistory
+from utils.permissions import SupabaseAuthenticated
+from ride.serializers import RideHistorySerializer, RideSerializer
+from ride.models import RideHistory, Ride
+
 
 class UserRideHistoryListApiView(ListAPIView):
     permission_classes = [SupabaseAuthenticated]  
@@ -9,5 +10,5 @@ class UserRideHistoryListApiView(ListAPIView):
 
     def get_queryset(self):
         user_id = self.request.user_id
-        user_id = 21
         return RideHistory.objects.filter(riderId=user_id)
+

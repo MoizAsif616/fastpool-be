@@ -7,5 +7,6 @@ router.register(r'rides', RideViewSet, basename='ride')
 router.register(r'ride/requests', RideRequestViewSet, basename='ride-request') 
 
 urlpatterns = [
+  path('search/', RideSearchApiView.as_view(), name='ride-search'),
   path('', include(router.urls)),
 ]

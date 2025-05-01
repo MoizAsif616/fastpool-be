@@ -162,7 +162,7 @@ REST_FRAMEWORK = {
 # ]
   'DEFAULT_PAGINATION_CLASS': 'utils.pagination.GlobalIdCursorPagination',
   'PAGE_SIZE': 10, 
-   
+	"DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
 }
 
 CACHE={

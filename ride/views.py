@@ -11,9 +11,15 @@ from utils.helper import*
 from utils.decorators import auth_required
 from driver.models import Vehicle
 from utils.pagination import GlobalIdCursorPagination
+from utils.permissions import SupabaseAuthenticated
+from ride.filters import RideFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
+from rest_framework.generics import ListAPIView
 # Create your views here.
 
 class RideViewSet(viewsets.ModelViewSet):
+  permission_classes= [SupabaseAuthenticated]
   queryset = Ride.objects.all()
   serializer_class = RideSerializer
 
@@ -39,7 +45,7 @@ class RideViewSet(viewsets.ModelViewSet):
     context['role'] = getattr(self, 'role', None)  # Pass role to serializer context
     return context
 
-  @auth_required
+  # @auth_required
   def list(self, request, *args, **kwargs):
     try:
       if not request.query_params.get('role'):
@@ -235,6 +241,24 @@ class RideViewSet(viewsets.ModelViewSet):
         {'error': 'An error occurred while deleting the ride', 'details': str(e)},
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
+
+
+
+
+class RideSearchApiView(ListAPIView):
+    permission_classes = [SupabaseAuthenticated]
+    serializer_class = RideSerializer
+    queryset = Ride.objects.all()
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_class = RideFilter
+    ordering_fields = ['date', 'time', 'amount']  # optional ordering support
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context['role'] = 'rider'  # Add context for dynamic serializer behavior
+        return context
+
+
 
 class RideRequestViewSet(viewsets.ModelViewSet):
   queryset = RideRequest.objects.all()
@@ -529,6 +553,7 @@ class RideRequestViewSet(viewsets.ModelViewSet):
         {'error': 'An error occurred while accepting the ride request', 'details': str(e)},
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
+
 
 # This function will be called implicitly by the server after a ride request for a certain rider is accepted.
 def createRideHistory(data):
