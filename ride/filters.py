@@ -1,4 +1,3 @@
-# ride/filters.py
 from django.db.models import Q
 import django_filters
 from .models import Ride
@@ -32,9 +31,9 @@ class RideFilter(django_filters.FilterSet):
         field_name="description", lookup_expr="icontains"
     )
 
-    # New: Search by driver's username
-    driver_username = django_filters.CharFilter(
-        field_name="driver__username", lookup_expr="icontains"
+    # Search by vehicle type
+    vehicle_type = django_filters.CharFilter(
+        field_name="vehicle__type", lookup_expr="icontains", label="Vehicle Type"
     )
 
     class Meta:
