@@ -329,25 +329,24 @@ class RideRequestViewSet(viewsets.ModelViewSet):
       # Check if the user already has a request for this ride
       existing_request = RideRequest.objects.filter(ride=ride, rider=request.user_id).first()
       if existing_request:
-        if existing_request.status != 'denied':
+        if existing_request.status == 'accepted':
           return Response(
-            {'error': 'Your previous request is not denied'},
+            {'error': 'Your request for this ride is already accepted'},
             status=status.HTTP_400_BAD_REQUEST
           )
-        else:
-          # If the status is denied, check if there are available seats
-          if ride.available_seats <= 0:
-            return Response(
-              {'error': 'No available seats in the ride'},
-              status=status.HTTP_400_BAD_REQUEST
-            )
-
-      # Check if the ride has available seats
-      if ride.available_seats == 0:
-        return Response(
-          {'error': 'Ride has no available seats'},
-          status=status.HTTP_400_BAD_REQUEST
-        )
+        elif existing_request.status == 'pending':
+          return Response(
+            {'error': 'Your request for this ride is not denied yet'},
+            status=status.HTTP_400_BAD_REQUEST
+          )
+        elif existing_request.status == 'capacity-full':
+          return Response(
+            {'error': 'There is no available seat for you in the ride'},
+            status=status.HTTP_400_BAD_REQUEST
+          )
+        elif existing_request.status == 'denied':
+          # Delete the previous denied request
+          existing_request.delete()
 
       # Check if the driver of the ride is the same as the request user
       if ride.driver.id == request.user_id:
