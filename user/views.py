@@ -1,5 +1,7 @@
 from django.shortcuts import render
 from rest_framework import viewsets, status
+
+from utils.network import get_server_url
 from .models import *
 from .serializers import *
 from utils.supabase_client import supabase
@@ -83,10 +85,9 @@ class UserViewSet(viewsets.ModelViewSet):
     resend_verification_email(email)
     return Response(status=status.HTTP_200_OK)
 
-  @action(detail=False, methods=['post'], url_path='request-link')
+  @action(detail=False, methods=['post'], url_path='password/request-link')
   def send_password_reset_link(self, request):
     email = request.data.get('email')
-    url = request.data.get('url')
     if not email:
       return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
     try:
@@ -95,7 +96,7 @@ class UserViewSet(viewsets.ModelViewSet):
         token = uuid.uuid4().hex
         cache.set(token, user.email, timeout=5*3600)
         print("making url")
-        URL = url + '?token=' + token
+        URL = get_server_url() +'/users/password/set-new-password/' '?token=' + token
         send_password_reset_email(email, URL)
         return Response(status=status.HTTP_200_OK)
       else:
@@ -103,7 +104,7 @@ class UserViewSet(viewsets.ModelViewSet):
     except Exception as e:
       return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
-  @action(detail=False, methods=['post'], url_path='reset')
+  @action(detail=False, methods=['post'], url_path='password/reset')
   def reset_password(self, request):
     token = request.data.get('token')
     password = request.data.get('password')
@@ -313,3 +314,14 @@ class UserViewSet(viewsets.ModelViewSet):
         {'error': 'An error occurred while updating the profile', 'details': str(e)},
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
+  @action(detail=False, methods=['get'], url_path='password/set-new-password')
+  def reset_password_page(self, request):
+      token = request.GET.get('token')
+      if not token:
+          return Response({'error': 'Token is required'}, status=400)
+      
+      # Verify token exists in cache
+      if not cache.get(token):
+          return Response({'error': 'Invalid/expired token'}, status=400)
+      
+      return render(request, 'new_password.html', {'token': token})

@@ -13,6 +13,10 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from pathlib import Path
 from dotenv import load_dotenv
 import os
+import socket
+
+hostname = socket.gethostname()
+local_ip = socket.gethostbyname(hostname)
 
 load_dotenv()
 
@@ -29,10 +33,10 @@ SECRET_KEY = 'django-insecure-fcx@nt&zco(yo*a24klev%j2)9-^@l6ai48sge)mw^mrgm#c+8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['10.0.2.2','127.0.0.1', '192.168.43.254']
+ALLOWED_HOSTS = ['127.0.0.1', local_ip, '10.0.0.2']
 
 
-# Application definition
+# Application definitio
 
 INSTALLED_APPS = [
 	'django.contrib.admin',

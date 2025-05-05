@@ -132,8 +132,7 @@ class DriverViewSet(viewsets.ModelViewSet):
         
         upcoming_ride = Ride.objects.filter(
             driver=request.user_id,
-            ride_time__gte=timezone.now()  # Only future rides
-        ).order_by('time').first()
+        ).order_by('date', 'time').first()  
 
         response_data['upcoming_ride'] = RideSerializer(upcoming_ride).data if upcoming_ride else None
         
