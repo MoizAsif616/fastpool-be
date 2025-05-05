@@ -115,46 +115,27 @@ class DriverViewSet(viewsets.ModelViewSet):
   @action(detail=False, methods=['get'])
   @auth_required
   def homepage(self, request):   
-    role = request.query_params.get('role')
-    if not role:
-        return Response(
-            {'error': 'Role parameter is required'},
-            status=status.HTTP_400_BAD_REQUEST
-        )
     
     response_data = {}
-    now = timezone.now()
+    # print(f"Request data: {request.data}")
     
     try:
-        # Get the user object
-        user = User.objects.get(id=request.user_id)
         # Get  driver profile
         driver = Driver.objects.get(id=request.user_id)
-        # Rides in last 30 days (filtered by current driver)
-        thirty_days_ago = now - timedelta(days=30)
+        print(f"Driver: {driver}")
         recent_rides = Ride.objects.filter(
-            driver=user,  # Using the user object
-            date__gte=thirty_days_ago.date()
+            driver=request.user_id,  # Using the user object
         )
-        response_data['rides_last_30_days'] = recent_rides.count()
-        
-        # Ratings (only for drivers)
-        if role == 'driver':
-            avg_rating = driver.ratings / driver.no_of_ratings if driver.no_of_ratings > 0 else 0
-            response_data['ratings'] = {
-                'average_rating': round(avg_rating, 2),
-                'total_ratings': driver.no_of_ratings
-            }
-        
+        response_data['active_rides'] = recent_rides.count()
+      
         # Upcoming rides (filtered by current driver)
-        twelve_hours_later = now + timedelta(hours=12)
-        upcoming_rides = Ride.objects.filter(
-            driver=user,  # Using the user object
-            time__gte=now,
-            time__lte=twelve_hours_later
-        ).order_by('time')
         
-        response_data['upcoming_rides'] = RideSerializer(upcoming_rides, many=True).data
+        upcoming_ride = Ride.objects.filter(
+            driver=request.user_id,
+            ride_time__gte=timezone.now()  # Only future rides
+        ).order_by('time').first()
+
+        response_data['upcoming_ride'] = RideSerializer(upcoming_ride).data if upcoming_ride else None
         
         return Response(response_data, status=status.HTTP_200_OK)
         
