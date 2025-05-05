@@ -51,12 +51,12 @@ def resend_verification_email(email):
 def send_password_reset_email(email, reset_link):
 	try:
 		subject = 'Reset Your Password - Fastpool'
-		html_message = render_to_string('password_reset_email.html', {'reset_link': "http://" + reset_link})
+		html_message = render_to_string('password_reset_email.html', {'reset_link': reset_link})
 		plain_message = strip_tags(html_message)
 		from_email = settings.EMAIL_HOST_USER
 		to = email
 
-		print("url is:","http://" + reset_link)
+		print("url is:", reset_link)
 		send_mail(subject, plain_message, from_email, [to], html_message=html_message)
 	except Exception as e:
 		raise e
