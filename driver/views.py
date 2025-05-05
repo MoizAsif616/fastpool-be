@@ -16,7 +16,7 @@ from datetime import timedelta
 
 class DriverViewSet(viewsets.ModelViewSet):
   
-  @action(detail=False, methods=['post'], url_path='register-vehicle')
+  @action(detail=False, methods=['post'], url_path='vehicles/register')
   @auth_required
   def register_vehicle(self, request):
     try:
@@ -47,7 +47,7 @@ class DriverViewSet(viewsets.ModelViewSet):
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
 
-  @action(detail=False, methods=['get'], url_path='get-vehicles')
+  @action(detail=False, methods=['get'], url_path='vehicles/get')
   @auth_required
   def get_vehicles(self, request):
     try:
@@ -70,6 +70,45 @@ class DriverViewSet(viewsets.ModelViewSet):
     except Exception as e:
       return Response(
         {'error': 'An error occurred while fetching vehicles', 'details': str(e)},
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+      )
+
+  @action(detail=False, methods=['delete'], url_path='vehicles/delete')
+  @auth_required
+  def delete_vehicle(self, request):
+    try:
+      vehicle_id = request.data.get('id')
+      if not vehicle_id:
+        return Response(
+          {'error': 'Vehicle ID is required'},
+          status=status.HTTP_400_BAD_REQUEST
+        )
+
+      # Check if the vehicle exists and belongs to the authenticated driver
+      vehicle = Vehicle.objects.filter(id=vehicle_id, driver=request.user_id).first()
+      if not vehicle:
+        return Response(
+          {'error': 'Vehicle not found or does not belong to the driver'},
+          status=status.HTTP_404_NOT_FOUND
+        )
+
+      # Check if the vehicle is in use in the Ride table
+      if Ride.objects.filter(vehicle=vehicle).exists():
+        return Response(
+          {'error': 'Vehicle cannot be deleted as it is in use in rides'},
+          status=status.HTTP_400_BAD_REQUEST
+        )
+
+      # Delete the vehicle
+      vehicle.delete()
+      return Response(
+        {'message': 'Vehicle deleted successfully'},
+        status=status.HTTP_200_OK
+      )
+
+    except Exception as e:
+      return Response(
+        {'error': 'An error occurred while deleting the vehicle', 'details': str(e)},
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
 

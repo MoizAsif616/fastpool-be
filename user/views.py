@@ -234,9 +234,10 @@ class UserViewSet(viewsets.ModelViewSet):
         profile_data['ratings'] = driver.ratings
 
         # Fetch vehicle information
-        vehicles = Vehicle.objects.filter(user_id=request.user_id)
+        vehicles = Vehicle.objects.filter(driver=request.user_id)
         profile_data['vehicles'] = [
           {
+            'id': vehicle.id,
             'name': vehicle.name,
             'registration_number': vehicle.registration_number,
             'type': vehicle.type,

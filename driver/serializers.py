@@ -14,7 +14,7 @@ class DriverSerializer(serializers.ModelSerializer):
 class VehicleSerializer(serializers.ModelSerializer):
   class Meta:
     model = Vehicle
-    fields = ['driver', 'name', 'registration_number', 'type', 'capacity', 'AC']
+    fields = ['id', 'driver', 'name', 'registration_number', 'type', 'capacity', 'AC']  # Include 'id'
     extra_kwargs = {
       'driver': {'required': True},
       'name': {'required': True},
@@ -22,3 +22,8 @@ class VehicleSerializer(serializers.ModelSerializer):
       'type': {'required': True},
       'capacity': {'required': True},
     }
+
+  def to_representation(self, instance):
+    representation = super().to_representation(instance)
+    representation['id'] = instance.id  # Ensure 'id' is included
+    return representation
