@@ -47,6 +47,32 @@ class DriverViewSet(viewsets.ModelViewSet):
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
 
+  @action(detail=False, methods=['get'], url_path='get-vehicles')
+  @auth_required
+  def get_vehicles(self, request):
+    try:
+      # Fetch all vehicles associated with the authenticated driver
+      vehicles = Vehicle.objects.filter(driver=request.user_id)
+      vehicle_data = VehicleSerializer(vehicles, many=True).data
+
+      return Response(
+        {
+          'message': 'Vehicles retrieved successfully',
+          'data': vehicle_data
+        },
+        status=status.HTTP_200_OK
+      )
+    except ObjectDoesNotExist:
+      return Response(
+        {'error': 'No vehicles found for the driver'},
+        status=status.HTTP_404_NOT_FOUND
+      )
+    except Exception as e:
+      return Response(
+        {'error': 'An error occurred while fetching vehicles', 'details': str(e)},
+        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+      )
+
   @action(detail=False, methods=['get'])
   @auth_required
   def homepage(self, request):   
