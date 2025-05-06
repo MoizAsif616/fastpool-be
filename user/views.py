@@ -66,7 +66,7 @@ class UserViewSet(viewsets.ModelViewSet):
   @action(detail=False, methods=['post'], url_path='verify')
   def verify(self, request):
     data = request.data
-    otp = data.pop('otp', None)
+    otp = data.get('otp')
     if otp:
       cache_key = f'otp_{data.get("email")}'
       if cache.get(cache_key) == otp:
