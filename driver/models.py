@@ -19,10 +19,15 @@ class Driver(models.Model):
 
 
 class Vehicle(models.Model):
+    VEHICLE_TYPES = [
+        ('Car', 'Car'),
+        ('Bike', 'Bike'),
+    ]
+    
     driver = models.ForeignKey(User, on_delete=models.CASCADE)
     name = models.CharField(max_length=255)
     registration_number = models.CharField(max_length=255)
-    type = models.CharField(max_length=255)
+    type = models.CharField(max_length=255, choices=VEHICLE_TYPES)
     capacity = models.IntegerField(default=0)
     AC = models.BooleanField(default=False)
 

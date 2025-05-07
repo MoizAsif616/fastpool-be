@@ -10,7 +10,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from utils.helper import*
 from utils.decorators import auth_required
 from driver.models import Vehicle
-from utils.pagination import GlobalIdCursorPagination
+from utils.pagination import GlobalIdCursorPagination, RideSearchPagination
 from utils.permissions import SupabaseAuthenticated
 from ride.filters import RideFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -203,42 +203,55 @@ class RideViewSet(viewsets.ModelViewSet):
   @auth_required
   def destroy(self, request, *args, **kwargs):
     try:
-      ride_id = kwargs.get('pk')  # Get ride ID from URL parameters
-      if not ride_id:
+      role = request.query_params.get('role')
+      if not role:
         return Response(
-          {'error': 'Ride ID is required in the URL'},
+          {'error': 'Role parameter is required'},
+          status=status.HTTP_400_BAD_REQUEST
+        )
+
+      if role != 'rider':
+        return Response(
+          {'error': 'Only riders can delete their requests'},
+          status=status.HTTP_403_FORBIDDEN
+        )
+
+      ride_request_id = kwargs.get('pk')  
+      if not ride_request_id:
+        return Response(
+          {'error': 'Ride request ID is required in the URL'},
           status=status.HTTP_400_BAD_REQUEST
         )
 
       try:
-        ride = Ride.objects.get(pk=ride_id)
-      except Ride.DoesNotExist:
+        ride_request = RideRequest.objects.get(pk=ride_request_id)
+      except RideRequest.DoesNotExist:
         return Response(
-          {'error': 'Ride does not exist'},
+          {'error': 'Ride request does not exist'},
           status=status.HTTP_404_NOT_FOUND
         )
 
-      if ride.driver.id != request.user_id:
+      if ride_request.rider.id != request.user_id:
         return Response(
-          {'error': 'You are not authorized to delete this ride'},
+          {'error': 'You are not authorized to delete this ride request'},
           status=status.HTTP_403_FORBIDDEN
         )
-
-      if ride.riders:
+      
+      if ride_request.status != 'pending':
         return Response(
-          {'error': 'Cannot delete ride as it already has riders'},
+          {'error': 'Only pending requests can be deleted'},
           status=status.HTTP_400_BAD_REQUEST
         )
 
-      ride.delete()
+      ride_request.delete()
 
       return Response(
-        {'message': 'Ride deleted successfully'},
+        {'message': 'Ride request deleted successfully'},
         status=status.HTTP_200_OK
       )
     except Exception as e:
       return Response(
-        {'error': 'An error occurred while deleting the ride', 'details': str(e)},
+        {'error': 'An error occurred while deleting the ride request', 'details': str(e)},
         status=status.HTTP_500_INTERNAL_SERVER_ERROR
       )
 
@@ -252,11 +265,18 @@ class RideSearchApiView(ListAPIView):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_class = RideFilter
     ordering_fields = ['date', 'time', 'amount']  # optional ordering support
-
+    pagination_class = RideSearchPagination
+    
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['role'] = 'rider'  # Add context for dynamic serializer behavior
+        print("here")
+        # context['role'] = 'rider'  # Add context for dynamic serializer behavior
         return context
+
+    def get_paginated_response(self, data):
+        response = super().get_paginated_response(data)
+        response.data['page_size'] = 7  # Add page size to response
+        return response
 
 
 
@@ -264,6 +284,8 @@ class RideRequestViewSet(viewsets.ModelViewSet):
   queryset = RideRequest.objects.all()
   serializer_class = RideRequestSerializer
   http_method_names = ['get', 'post', 'delete'] 
+  pagination_class = RideSearchPagination
+  pagination_class.page_size = 8
 
   def get_queryset(self):
     queryset = super().get_queryset()
