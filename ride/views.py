@@ -10,7 +10,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from utils.helper import*
 from utils.decorators import auth_required
 from driver.models import Vehicle
-from utils.pagination import GlobalIdCursorPagination
+from utils.pagination import GlobalIdCursorPagination, RideSearchPagination
 from utils.permissions import SupabaseAuthenticated
 from ride.filters import RideFilter
 from django_filters.rest_framework import DjangoFilterBackend
@@ -252,11 +252,18 @@ class RideSearchApiView(ListAPIView):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_class = RideFilter
     ordering_fields = ['date', 'time', 'amount']  # optional ordering support
-
+    pagination_class = RideSearchPagination
+    
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        context['role'] = 'rider'  # Add context for dynamic serializer behavior
+        print("here")
+        # context['role'] = 'rider'  # Add context for dynamic serializer behavior
         return context
+
+    def get_paginated_response(self, data):
+        response = super().get_paginated_response(data)
+        response.data['page_size'] = 7  # Add page size to response
+        return response
 
 
 
@@ -264,6 +271,8 @@ class RideRequestViewSet(viewsets.ModelViewSet):
   queryset = RideRequest.objects.all()
   serializer_class = RideRequestSerializer
   http_method_names = ['get', 'post', 'delete'] 
+  pagination_class = RideSearchPagination
+  pagination_class.page_size = 8
 
   def get_queryset(self):
     queryset = super().get_queryset()
