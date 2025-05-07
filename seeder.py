@@ -10,7 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fastpool-be.settings')
 django.setup()
 
-from ride.models import Ride, RideRequest
+from ride.models import Ride, RideRequest, RideHistory
 from user.models import User
 from driver.models import Vehicle
 from django.db import transaction
@@ -149,9 +149,49 @@ def seed_ride_requests(num_requests=5):
     except Exception as e:
         print(f"An error occurred: {str(e)}")
 
+def seed_ride_history(num_histories=10):
+    try:
+        # Get the rider user
+        rider = User.objects.get(email="shariq.munir7@gmail.com")
+        
+        histories_created = []
+        
+        with transaction.atomic():
+            for _ in range(num_histories):
+                # Generate random source and destination
+                source = get_random_location()
+                dest = get_random_location()
+                
+                # Generate random date (within last 30 days)
+                today = datetime.now().date()
+                days_ago = random.randint(0, 30)
+                ride_date = today - timedelta(days=days_ago)
+                
+                # Create ride history
+                history = RideHistory.objects.create(
+                    riderId=rider,
+                    source_lat=source['lat'],
+                    source_lng=source['lng'],
+                    destination_lat=dest['lat'],
+                    destination_lng=dest['lng'],
+                    date=ride_date,
+                    time=get_random_time()
+                )
+                histories_created.append(history)
+                
+        print(f"Successfully created {len(histories_created)} ride histories!")
+        
+    except User.DoesNotExist as e:
+        print(f"Error: {str(e)}")
+        print("Please make sure the rider exists in the database.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
 if __name__ == "__main__":
     # print("Starting ride seeding process...")
     # seed_rides()
-    print("Starting ride request seeding process...")
-    seed_ride_requests()
+    # print("Starting ride request seeding process...")
+    # seed_ride_requests()
+    print("Starting ride history seeding process...")
+    seed_ride_history()
     print("Seeding completed!") 
