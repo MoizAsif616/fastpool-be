@@ -13,6 +13,7 @@ from utils.helper import*
 from utils.decorators import auth_required
 from django.core.cache import cache
 import uuid
+import re  # Import regex module for email validation
 #import messages module to display messages
 from django.contrib import messages
 # Create your views here.
@@ -34,10 +35,17 @@ class UserViewSet(viewsets.ModelViewSet):
   
   @action(detail=False, methods=['post'], url_path='signup')
   def signup(self, request):
+    email = request.data.get('email')
+    if not email:
+      return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate email format
+    if not re.match(r'^l\d{2}\d{4}@lhr\.nu\.edu\.pk$', email):
+      return Response({'error': 'Invalid NU email.'}, status=status.HTTP_400_BAD_REQUEST)
 
     serializer = self.get_serializer(data=request.data)
     if serializer.is_valid(raise_exception = True):
-      send_verification_email(request.data.get('username'), request.data.get('email'))
+      send_verification_email(request.data.get('username'), email)
       return Response(status=status.HTTP_200_OK)
   
   @action(detail=False, methods=['post'], url_path='login')
@@ -66,9 +74,17 @@ class UserViewSet(viewsets.ModelViewSet):
   @action(detail=False, methods=['post'], url_path='verify')
   def verify(self, request):
     data = request.data
+    email = data.get('email')
+    if not email:
+      return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate email format
+    if not re.match(r'^l\d{2}\d{4}@lhr\.nu\.edu\.pk$', email):
+      return Response({'error': 'Invalid NU email.'}, status=status.HTTP_400_BAD_REQUEST)
+
     otp = data.get('otp')
     if otp:
-      cache_key = f'otp_{data.get("email")}'
+      cache_key = f'otp_{email}'
       if cache.get(cache_key) == otp:
         serializer = self.get_serializer(data=data)
         if serializer.is_valid():
@@ -82,27 +98,38 @@ class UserViewSet(viewsets.ModelViewSet):
   @action(detail=False, methods=['post'], url_path='resend-otp')
   def resend_otp(self, request):
     email = request.data.get('email')
+    if not email:
+      return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Validate email format
+    if not re.match(r'^l\d{2}\d{4}@lhr\.nu\.edu\.pk$', email):
+      return Response({'error': 'Invalid NU email.'}, status=status.HTTP_400_BAD_REQUEST)
+
     resend_verification_email(email)
     return Response(status=status.HTTP_200_OK)
 
-  @action(detail=False, methods=['post'], url_path='password/request-link')
-  def send_password_reset_link(self, request):
-    email = request.data.get('email')
-    if not email:
-      return Response({'error': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
-    try:
-      user = User.objects.get(email=email)
-      if user:
-        token = uuid.uuid4().hex
-        cache.set(token, user.email, timeout=5*3600)
-        print("making url")
-        URL = get_server_url() +'/users/password/set-new-password/' '?token=' + token
-        send_password_reset_email(email, URL)
-        return Response(status=status.HTTP_200_OK)
-      else:
-        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-    except Exception as e:
-      return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    @action(detail=False, methods=['post'], url_path='password/request-link')
+    def send_password_reset_link(self, request):
+        email = request.data.get('email')
+        if not email:
+            return Response({'error': 'Email is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Validate email format
+        if not re.match(r'^l\d{2}\d{4}@lhr\.nu\.edu\.pk$', email):
+            return Response({'error': 'Invalid NU email.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+            if user:
+                token = uuid.uuid4().hex
+                cache.set(token, user.email, timeout=5 * 3600)
+                URL = get_server_url() + '/users/password/set-new-password/' '?token=' + token
+                send_password_reset_email(email, URL)
+                return Response(status=status.HTTP_200_OK)
+            else:
+                return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
   @action(detail=False, methods=['post'], url_path='password/reset')
   def reset_password(self, request):
