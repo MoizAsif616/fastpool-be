@@ -298,20 +298,18 @@ class RideRequestViewSet(viewsets.ModelViewSet):
       queryset = queryset.filter(rider=self.request.user_id)
     elif role == 'driver':
       ride_id = self.request.query_params.get('id')
-      if not ride_id:
-        return queryset.none()  # Return empty if no ride_id for driver
-
-      try:
-        ride = Ride.objects.get(pk=ride_id, driver=self.request.user_id)
-      except Ride.DoesNotExist:
-        return queryset.none()  # Return empty if the ride does not exist or the user is not the driver
-
-      if ride.available_seats > 0:
-        # Show requests with status 'pending' or 'accepted' when seats are available
-        queryset = queryset.filter(ride_id=ride_id, status__in=['pending', 'accepted'])
+      if ride_id:
+        try:
+          ride = Ride.objects.get(pk=ride_id, driver=self.request.user_id)
+          if ride.available_seats > 0:
+            queryset = queryset.filter(ride_id=ride_id, status__in=['pending', 'accepted'])
+          else:
+            queryset = queryset.filter(ride_id=ride_id, status='accepted')
+        except Ride.DoesNotExist:
+          return queryset.none()  # Return empty if the ride does not exist or the user is not the driver
       else:
-        # Show only 'accepted' requests when no seats are available
-        queryset = queryset.filter(ride_id=ride_id, status='accepted')
+        # Include all requests for rides driven by the user with status 'pending' or 'accepted'
+        queryset = queryset.filter(ride__driver=self.request.user_id, status__in=['pending', 'accepted'])
 
     return queryset
 
@@ -337,14 +335,11 @@ class RideRequestViewSet(viewsets.ModelViewSet):
     
     if role == 'driver':
       ride_id = request.query_params.get('id')
-      if not ride_id:
-        return Response(
-          {'error': 'Ride ID is required as query parameter for driver role'},
-          status=status.HTTP_400_BAD_REQUEST
-        )
-
       try:
-        Ride.objects.get(pk=ride_id, driver=request.user_id)
+        if ride_id:
+          Ride.objects.get(pk=ride_id, driver=request.user_id)
+        else:
+          Ride.objects.filter(driver=request.user_id)
       except Ride.DoesNotExist:
         return Response(
           {'error': 'Ride does not exist or you are not the driver'},
