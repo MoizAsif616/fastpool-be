@@ -6,10 +6,15 @@ from ride.serializers import RideHistorySerializer
 from ride.models import RideHistory, RideRequest, Ride
 import random
 from django.utils import timezone
+from utils.pagination import GlobalIdCursorPagination
+
+class CustomPagination(GlobalIdCursorPagination):
+    page_size = 10
 
 class UserRideHistoryListApiView(ListAPIView):
     permission_classes = [SupabaseAuthenticated]  
     serializer_class = RideHistorySerializer
+    pagination_class = CustomPagination
 
     def get_queryset(self):
         user_id = self.request.user_id
