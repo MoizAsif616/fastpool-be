@@ -11,13 +11,9 @@ class RideSerializer(serializers.ModelSerializer):
 
   def to_representation(self, instance):
     representation = super().to_representation(instance)
-    role = self.context.get('role')  # Get role from serializer context
-
-    if role == 'rider':
-      representation['driver'] = UserSerializer(instance.driver).data
-    elif role == 'driver':
-      representation.pop('driver', None)  # Remove driver data from response
-
+    
+    # Always include complete driver information
+    representation['driver'] = UserSerializer(instance.driver).data
     representation['vehicle'] = VehicleSerializer(instance.vehicle).data
 
     # Fetch rider information using UserSerializer
@@ -49,10 +45,22 @@ class RideRequestSerializer(serializers.ModelSerializer):
 
   def to_representation(self, instance):
     representation = super().to_representation(instance)
-    role = self.context.get('role')  # Get role from serializer context
+    role = self.context.get('role')
 
     if role == 'driver':
       # Replace rider ID with full rider information
       representation['rider'] = UserSerializer(instance.rider).data
+    elif role == 'rider':
+      # Include ride details
+      ride = instance.ride
+      representation['ride_details'] = {
+        'source_lat': ride.source_lat,
+        'source_lng': ride.source_lng,
+        'destination_lat': ride.destination_lat,
+        'destination_lng': ride.destination_lng,
+        'amount': ride.amount,
+        'time': ride.time,
+        'date': ride.date
+      }
 
     return representation
